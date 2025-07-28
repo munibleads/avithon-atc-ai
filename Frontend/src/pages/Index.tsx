@@ -9,6 +9,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { useToast } from '@/hooks/use-toast';
 import { StatusBadge, ATCCommunicationCard, RequiredActionsCard, RecentActionsCard } from '@/components';
 import { AudioData, Action, ApprovedAction } from '@/types';
+import { transcribeWithBackend } from "@/lib/transcribe";
 
 const Index = () => {
   const [currentInstruction, setCurrentInstruction] = useState('');
@@ -97,11 +98,68 @@ const Index = () => {
     currentIndexRef.current = currentAudioIndex;
   }, [currentAudioIndex]);
 
+  const onPlay = async (audioFile: string, id: string) => {
+    try {
+      if (!audioRef.current) return;
+
+      audioRef.current.src = audioFile;
+      await audioRef.current.play();
+      setIsAudioPlaying(true);
+
+      const transcript = await transcribeWithBackend(audioFile);
+      if (transcript) {
+        setCurrentInstruction(transcript);
+        setShowTranscription(true); 
+      }
+
+      audioRef.current.onended = () => {
+        setIsAudioPlaying(false);
+      };
+    } catch (err) {
+      console.error("Error playing or transcribing:", err);
+      setIsAudioPlaying(false);
+    }
+  };
+
+  const handlePlay = async (audioUrl: string, id: string) => {
+    if (!audioUrl) return;
+
+    // Reset transcript first
+    setShowTranscription('');
+    setCurrentAudio(audioUrl);
+    setIsAudioPlaying(true);
+
+    // Load audio element if needed
+    if (audioRef.current) {
+      audioRef.current.src = audioUrl;
+      audioRef.current.play();
+    }
+
+    try {
+      const formData = new FormData();
+      const audioBlob = await fetch(audioUrl).then((res) => res.blob());
+      formData.append('file', audioBlob, 'audio.wav');
+
+      const response = await fetch('http://127.0.0.1:8000/transcribe', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await response.json();
+      setShowTranscription(data.transcription || 'No transcription found.');
+    } catch (err) {
+      console.error('Transcription error:', err);
+      setShowTranscription('Error fetching transcription.');
+    } finally {
+      setIsAudioPlaying(false);
+    }
+  };
+
   const handleAudioEnded = () => {
     setIsAudioPlaying(false);
     // Show transcription immediately when audio ends - no delay for pilot safety
     const currentAudio = audioData[currentIndexRef.current];
-    setCurrentInstruction(currentAudio.transcription);
+    //setCurrentInstruction(currentAudio.transcription);
     setCurrentFrequency(currentAudio.frequency);
     setControllerType(currentAudio.controller);
     setSignalStrength(currentAudio.signalStrength);
@@ -121,12 +179,17 @@ const Index = () => {
         audioRef.current.src = currentAudio.audioFile;
         audioRef.current.load();
         
-        audioRef.current.play().then(() => {
+        audioRef.current.play().then(async () => {
           setIsAudioPlaying(true);
-        }).catch((error) => {
+          const result = await transcribeWithBackend(currentAudio.audioFile);
+          if (result) {
+            setCurrentInstruction(result);
+            setShowTranscription(true);
+          }
+        }).catch(async (error) => { 
           console.error('Error playing audio:', error);
-          // If audio fails to play, show transcription immediately - pilot safety critical
-          setCurrentInstruction(currentAudio.transcription);
+          const fallbackTranscript = await transcribeWithBackend(currentAudio.audioFile); // ✅ no more syntax error
+          setCurrentInstruction(fallbackTranscript);
           setCurrentFrequency(currentAudio.frequency);
           setControllerType(currentAudio.controller);
           setSignalStrength(currentAudio.signalStrength);
@@ -149,6 +212,45 @@ const Index = () => {
     setSuggestions([]);
   };
 
+  // AI Integration
+  const transcribeWithBackend = async (audioFilePath: string) => {
+    try {
+      const response = await fetch('http://localhost:8000/transcribe', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ audio_path: audioFilePath }),
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        return data.transcription;
+      } else {
+        throw new Error(data.error || 'Transcription failed');
+      }
+    } catch (error) {
+      console.error('Error during transcription:', error);
+      toast({
+        title: 'Transcription Error',
+        description: String(error),
+      });
+      return '';
+    }
+  };
+
+  const [transcript, setTranscript] = useState("");
+
+  const handleTranscriptRequest = async () => {
+    const currentAudio = audioData[currentIndexRef.current];
+    const result = await transcribeWithBackend(currentAudio.audioFile);
+
+    if (result) {
+      setCurrentInstruction(result);
+      setShowTranscription(true);
+    }
+  };
+
   const replayAudio = () => {
     if (audioRef.current && currentInstruction) {
       audioRef.current.currentTime = 0;
@@ -161,43 +263,21 @@ const Index = () => {
     }
   };
 
-  const nextAudio = () => {
-    let nextIndex;
-    if (currentIndexRef.current < audioData.length - 1) {
-      nextIndex = currentIndexRef.current + 1;
-    } else {
-      nextIndex = 0;
-    }
-    
-    // Update both ref and state immediately
+  const nextAudio = async () => {
+    let nextIndex = currentIndexRef.current < audioData.length - 1 
+      ? currentIndexRef.current + 1 
+      : 0;
+
     currentIndexRef.current = nextIndex;
     setCurrentAudioIndex(nextIndex);
     setShowTranscription(false);
     setCurrentInstruction('');
     setSuggestions([]);
     setIsSimulationRunning(true);
-    
-    // Use the nextIndex directly to ensure we play the correct audio
-    const nextAudio = audioData[nextIndex];
-    if (audioRef.current && nextAudio) {
-      audioRef.current.src = nextAudio.audioFile;
-      audioRef.current.load();
-      
-      audioRef.current.play().then(() => {
-        setIsAudioPlaying(true);
-      }).catch((error) => {
-        console.error('Error playing audio:', error);
-        // If audio fails to play, show transcription immediately - pilot safety critical
-        setCurrentInstruction(nextAudio.transcription);
-        setCurrentFrequency(nextAudio.frequency);
-        setControllerType(nextAudio.controller);
-        setSignalStrength(nextAudio.signalStrength);
-        setShowTranscription(true);
-        setSuggestions(nextAudio.suggestions.slice(0, 2));
-      });
-    }
-  };
 
+    const nextAudioFile = audioData[nextIndex].audioFile;
+    await onPlay(nextAudioFile, 'next');
+  };
 
 
   const handleApproveSuggestion = (suggestion) => {
@@ -335,10 +415,12 @@ const Index = () => {
               onStopSimulation={stopSimulation}
               onReplayAudio={replayAudio}
               onNextAudio={nextAudio}
+              audioRef={audioRef}
+              onPlay={onPlay}
+              onTranscriptRequest={handleTranscriptRequest}
               onCopyTranscription={copyTranscription}
               formatTranscription={formatTranscription}
               getConfidenceLevel={getConfidenceLevel}
-              audioRef={audioRef}
             />
           </div>
 
@@ -366,3 +448,4 @@ const Index = () => {
 };
 
 export default Index;
+

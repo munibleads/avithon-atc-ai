@@ -20,10 +20,13 @@ interface ATCCommunicationCardProps {
   onStopSimulation: () => void;
   onReplayAudio: () => void;
   onNextAudio: () => void;
+  onTranscriptRequest: () => void;
   onCopyTranscription: (text: string) => void;
   formatTranscription: (text: string) => string;
   getConfidenceLevel: (confidence: number) => { level: string; color: string };
   audioRef: React.RefObject<HTMLAudioElement>;
+  transcript?: string;
+  onPlay: (audioFile: string, id: string) => void;
 }
 
 const ATCCommunicationCard: React.FC<ATCCommunicationCardProps> = ({
@@ -40,9 +43,11 @@ const ATCCommunicationCard: React.FC<ATCCommunicationCardProps> = ({
   onStopSimulation,
   onReplayAudio,
   onNextAudio,
+  onTranscriptRequest,
   onCopyTranscription,
   formatTranscription,
   getConfidenceLevel,
+  onPlay,
   audioRef
 }) => {
   const isForMyCallsign = currentAudio.forMyCallsign && showTranscription;
@@ -99,11 +104,9 @@ const ATCCommunicationCard: React.FC<ATCCommunicationCardProps> = ({
               <RotateCcw className="h-3 w-3 mr-1" />
               Replay
             </Button>
-            <Button 
+            <Button
               size="sm"
-              onClick={onStartSimulation}
-              disabled={isAudioPlaying}
-              className="aviation-gradient text-xs"
+              onClick={() => onPlay(currentAudio.audioFile, 'play')}
             >
               {isAudioPlaying ? <Volume2 className="h-3 w-3 mr-1" /> : <Play className="h-3 w-3 mr-1" />}
               {isAudioPlaying ? 'Playing' : 'Play'}
