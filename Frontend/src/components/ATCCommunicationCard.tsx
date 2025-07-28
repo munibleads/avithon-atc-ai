@@ -190,12 +190,7 @@ const ATCCommunicationCard: React.FC<ATCCommunicationCardProps> = ({
           )}
 
           <div className={`p-4 rounded-lg mb-4 ${isForMyCallsign && showTranscription ? 'bg-red-50 border-2 border-red-200' : 'bg-gray-50 border border-gray-200'}`}>
-            {isAudioPlaying ? (
-              <div className="text-center text-muted-foreground py-8">
-                <div className="text-sm">Processing transmission...</div>
-                <div className="text-xs mt-1">Transcription will appear when complete</div>
-              </div>
-            ) : showTranscription && currentInstruction ? (
+            {showTranscription && currentInstruction ? (
               <>
                 {isForMyCallsign && (
                   <div className="flex items-center justify-between mb-2">
@@ -228,7 +223,12 @@ const ATCCommunicationCard: React.FC<ATCCommunicationCardProps> = ({
                 <div className="font-medium text-xl leading-relaxed">
                   "{renderFormattedText(currentInstruction)}"
                 </div>
-                {!isForMyCallsign && (
+                {isAudioPlaying && (
+                  <div className="text-center text-xs text-blue-600 mt-2 font-medium">
+                    🔊 Audio playing...
+                  </div>
+                )}
+                {!isForMyCallsign && !isAudioPlaying && (
                   <div className="flex justify-end mt-2">
                     <Button
                       size="sm"
@@ -244,8 +244,17 @@ const ATCCommunicationCard: React.FC<ATCCommunicationCardProps> = ({
               </>
             ) : (
               <div className="text-center text-muted-foreground py-8">
-                <div className="text-sm">No transcription available</div>
-                <div className="text-xs mt-1">Transmission will appear here</div>
+                {isAudioPlaying ? (
+                  <>
+                    <div className="text-sm">Processing transmission...</div>
+                    <div className="text-xs mt-1">Transcription will appear when complete</div>
+                  </>
+                ) : (
+                  <>
+                    <div className="text-sm">No transcription available</div>
+                    <div className="text-xs mt-1">Transmission will appear here</div>
+                  </>
+                )}
               </div>
             )}
           </div>
