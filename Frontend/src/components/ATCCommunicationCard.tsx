@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { Radio, Volume2, Play, Square, RotateCcw, AlertTriangle, Copy, Rewind, SkipForward } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -54,6 +54,47 @@ const ATCCommunicationCard: React.FC<ATCCommunicationCardProps> = ({
 }) => {
   const isForMyCallsign = currentAudio.forMyCallsign && showTranscription;
   const confidenceLevel = getConfidenceLevel(currentAudio.confidence);
+  
+  // Word-by-word reveal animation state
+  const [displayedWords, setDisplayedWords] = useState<string[]>([]);
+  const [isRevealing, setIsRevealing] = useState(false);
+
+  // Word-by-word reveal effect
+  useEffect(() => {
+    if (!showTranscription || !currentInstruction) {
+      setDisplayedWords([]);
+      setIsRevealing(false);
+      return;
+    }
+
+    setIsRevealing(true);
+    setDisplayedWords([]);
+    
+    const words = currentInstruction.split(' ');
+    let currentWordIndex = 0;
+    const revealSpeed = 120; // milliseconds per word
+    
+    const revealNextWord = () => {
+      if (currentWordIndex < words.length) {
+        setDisplayedWords(prev => [...prev, words[currentWordIndex]]);
+        currentWordIndex++;
+        
+        if (currentWordIndex < words.length) {
+          setTimeout(revealNextWord, revealSpeed);
+        } else {
+          setIsRevealing(false);
+        }
+      }
+    };
+
+    // Small delay before starting to reveal
+    const startRevealing = setTimeout(revealNextWord, 150);
+    
+    return () => {
+      clearTimeout(startRevealing);
+      setIsRevealing(false);
+    };
+  }, [currentInstruction, showTranscription]);
 
   // Enhanced replay with slow option
   const handleSlowReplay = () => {
@@ -64,10 +105,11 @@ const ATCCommunicationCard: React.FC<ATCCommunicationCardProps> = ({
     }
   };
 
-  // Render formatted transcription with markdown-style formatting
-  const renderFormattedText = (text: string) => {
-    const formatted = formatTranscription(text);
-    return formatted.split(/(\*\*[^*]+\*\*)/).map((part, index) => {
+  // Render formatted transcription with word-by-word reveal and fade-in effect
+  const renderFormattedText = () => {
+    const currentText = displayedWords.join(' ');
+    const formatted = formatTranscription(currentText);
+    const parts = formatted.split(/(\*\*[^*]+\*\*)/).map((part, index) => {
       if (part.startsWith('**') && part.endsWith('**')) {
         const content = part.slice(2, -2);
         return (
@@ -78,6 +120,12 @@ const ATCCommunicationCard: React.FC<ATCCommunicationCardProps> = ({
       }
       return part;
     });
+
+    return (
+      <>
+        {parts}
+      </>
+    );
   };
 
   return (
@@ -190,7 +238,7 @@ const ATCCommunicationCard: React.FC<ATCCommunicationCardProps> = ({
           )}
 
           <div className={`p-4 rounded-lg mb-4 ${isForMyCallsign && showTranscription ? 'bg-red-50 border-2 border-red-200' : 'bg-gray-50 border border-gray-200'}`}>
-            {showTranscription && currentInstruction ? (
+            {showTranscription && (currentInstruction || displayedWords.length > 0) ? (
               <>
                 {isForMyCallsign && (
                   <div className="flex items-center justify-between mb-2">
@@ -221,7 +269,7 @@ const ATCCommunicationCard: React.FC<ATCCommunicationCardProps> = ({
                   </div>
                 )}
                 <div className="font-medium text-xl leading-relaxed">
-                  "{renderFormattedText(currentInstruction)}"
+                  "{renderFormattedText()}"
                 </div>
                 {isAudioPlaying && (
                   <div className="text-center text-xs text-blue-600 mt-2 font-medium">
@@ -273,7 +321,7 @@ const ATCCommunicationCard: React.FC<ATCCommunicationCardProps> = ({
             <div className="text-blue-600 font-medium text-xs">
               ⏳ Processing transmission...
             </div>
-          ) : showTranscription && currentInstruction ? (
+          ) : showTranscription && (currentInstruction || displayedWords.length > 0) ? (
             isForMyCallsign ? (
               <div className="text-red-600 font-medium text-xs">
                 ✓ Clearance received • {currentAudio.suggestions?.length || 0} actions identified
