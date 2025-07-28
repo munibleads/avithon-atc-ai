@@ -19,6 +19,7 @@ const Index = () => {
   const [approvedSuggestions, setApprovedSuggestions] = useState<ApprovedAction[]>([]);
   const [currentAudioIndex, setCurrentAudioIndex] = useState(0);
   const [isSimulationRunning, setIsSimulationRunning] = useState(false);
+  const [processingTime, setProcessingTime] = useState<number | undefined>(undefined);
 
   const [currentFrequency, setCurrentFrequency] = useState('121.750');
   const [controllerType, setControllerType] = useState('TOWER');
@@ -125,8 +126,8 @@ const Index = () => {
     if (!audioUrl) return;
 
     // Reset transcript first
-    setShowTranscription('');
-    setCurrentAudio(audioUrl);
+    setShowTranscription(false);
+    setCurrentInstruction('');
     setIsAudioPlaying(true);
 
     // Load audio element if needed
@@ -146,10 +147,12 @@ const Index = () => {
       });
 
       const data = await response.json();
-      setShowTranscription(data.transcription || 'No transcription found.');
+      setCurrentInstruction(data.transcription || 'No transcription found.');
+      setShowTranscription(true);
     } catch (err) {
       console.error('Transcription error:', err);
-      setShowTranscription('Error fetching transcription.');
+      setCurrentInstruction('Error fetching transcription.');
+      setShowTranscription(true);
     } finally {
       setIsAudioPlaying(false);
     }
@@ -173,6 +176,7 @@ const Index = () => {
       setShowTranscription(false);
       setCurrentInstruction('');
       setSuggestions([]);
+      setProcessingTime(undefined);
       
       const currentAudio = audioData[currentIndexRef.current];
       if (audioRef.current) {
@@ -215,6 +219,8 @@ const Index = () => {
   // AI Integration
   const transcribeWithBackend = async (audioFilePath: string) => {
     try {
+      const startTime = performance.now();
+      
       const response = await fetch('http://localhost:8000/transcribe', {
         method: 'POST',
         headers: {
@@ -224,6 +230,11 @@ const Index = () => {
       });
 
       const data = await response.json();
+      const endTime = performance.now();
+      const duration = (endTime - startTime) / 1000; // Convert to seconds
+      
+      setProcessingTime(duration);
+
       if (response.ok) {
         return data.transcription;
       } else {
@@ -231,6 +242,7 @@ const Index = () => {
       }
     } catch (error) {
       console.error('Error during transcription:', error);
+      setProcessingTime(undefined);
       toast({
         title: 'Transcription Error',
         description: String(error),
@@ -421,6 +433,7 @@ const Index = () => {
               onCopyTranscription={copyTranscription}
               formatTranscription={formatTranscription}
               getConfidenceLevel={getConfidenceLevel}
+              processingTime={processingTime}
             />
           </div>
 

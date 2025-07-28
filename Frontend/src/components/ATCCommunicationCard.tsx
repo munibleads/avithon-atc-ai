@@ -27,6 +27,7 @@ interface ATCCommunicationCardProps {
   audioRef: React.RefObject<HTMLAudioElement>;
   transcript?: string;
   onPlay: (audioFile: string, id: string) => void;
+  processingTime?: number;
 }
 
 const ATCCommunicationCard: React.FC<ATCCommunicationCardProps> = ({
@@ -48,7 +49,8 @@ const ATCCommunicationCard: React.FC<ATCCommunicationCardProps> = ({
   formatTranscription,
   getConfidenceLevel,
   onPlay,
-  audioRef
+  audioRef,
+  processingTime
 }) => {
   const isForMyCallsign = currentAudio.forMyCallsign && showTranscription;
   const confidenceLevel = getConfidenceLevel(currentAudio.confidence);
@@ -161,30 +163,37 @@ const ATCCommunicationCard: React.FC<ATCCommunicationCardProps> = ({
 
         {/* Fixed Transcription Box */}
         <div className="flex-1 overflow-y-auto min-h-0">
+          {/* Audio Waveform Animation - Outside transcription box */}
+          {isAudioPlaying && (
+            <div className="text-center mb-4">
+              <div className="flex justify-center items-center mb-4">
+                <div className="flex items-center space-x-2 h-24">
+                  {[...Array(16)].map((_, i) => (
+                    <div
+                      key={`wave-${i}`}
+                      className="waveform-bar bg-gradient-to-t from-blue-500 to-blue-400 rounded-full"
+                      style={{
+                        width: '6px',
+                        height: `${20 + (i % 6) * 12}px`,
+                        animationDelay: `${i * 0.06}s`,
+                      }}
+                    />
+                  ))}
+                </div>
+              </div>
+              
+              <div className="inline-flex items-center space-x-2 px-4 py-2 bg-red-100 text-red-700 rounded-full text-sm font-medium">
+                <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+                <span>RECEIVING TRANSMISSION</span>
+              </div>
+            </div>
+          )}
+
           <div className={`p-4 rounded-lg mb-4 ${isForMyCallsign && showTranscription ? 'bg-red-50 border-2 border-red-200' : 'bg-gray-50 border border-gray-200'}`}>
             {isAudioPlaying ? (
-              <div className="text-center">
-                {/* Audio Waveform Animation */}
-                <div className="flex justify-center items-center mb-6">
-                  <div className="flex items-center space-x-2 h-24">
-                    {[...Array(16)].map((_, i) => (
-                      <div
-                        key={`wave-${i}`}
-                        className="waveform-bar bg-gradient-to-t from-blue-500 to-blue-400 rounded-full"
-                        style={{
-                          width: '6px',
-                          height: `${20 + (i % 6) * 12}px`,
-                          animationDelay: `${i * 0.06}s`,
-                        }}
-                      />
-                    ))}
-                  </div>
-                </div>
-                
-                <div className="inline-flex items-center space-x-2 px-4 py-2 bg-red-100 text-red-700 rounded-full text-sm font-medium">
-                  <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
-                  <span>RECEIVING TRANSMISSION</span>
-                </div>
+              <div className="text-center text-muted-foreground py-8">
+                <div className="text-sm">Processing transmission...</div>
+                <div className="text-xs mt-1">Transcription will appear when complete</div>
               </div>
             ) : showTranscription && currentInstruction ? (
               <>
@@ -240,6 +249,13 @@ const ATCCommunicationCard: React.FC<ATCCommunicationCardProps> = ({
               </div>
             )}
           </div>
+
+          {/* Processing Time */}
+          {processingTime && showTranscription && currentInstruction && (
+            <div className="text-center text-xs text-muted-foreground mb-2">
+              Processed in {processingTime.toFixed(2)}s
+            </div>
+          )}
         </div>
 
         {/* Status Footer */}
