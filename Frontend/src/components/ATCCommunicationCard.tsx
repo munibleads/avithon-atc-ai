@@ -135,94 +135,59 @@ const ATCCommunicationCard: React.FC<ATCCommunicationCardProps> = ({
         </div>
       </CardHeader>
       <CardContent className="flex-1 flex flex-col min-h-0">
-        {isAudioPlaying ? (
-          <div className="flex-1 flex flex-col justify-center">
-            <div className="text-center mb-6">
-              {/* Audio Waveform Animation */}
-              <div className="flex justify-center items-center mb-6">
-                <div className="flex items-center space-x-2 h-24">
-                  {[...Array(16)].map((_, i) => (
-                    <div
-                      key={`wave-${i}`}
-                      className="waveform-bar bg-gradient-to-t from-blue-500 to-blue-400 rounded-full"
-                      style={{
-                        width: '6px',
-                        height: `${20 + (i % 6) * 12}px`,
-                        animationDelay: `${i * 0.06}s`,
-                      }}
-                    />
-                  ))}
-                </div>
-              </div>
-              
-              <div className="inline-flex items-center space-x-2 px-4 py-2 bg-red-100 text-red-700 rounded-full text-sm font-medium">
-                <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
-                <span>RECEIVING TRANSMISSION</span>
-              </div>
+        {/* Fixed Header Section */}
+        <div className="space-y-2 mb-3 flex-shrink-0">
+          <div className="flex justify-between items-center">
+            <span className="font-mono text-lg font-bold">{currentFrequency}</span>
+            <Badge className="bg-blue-100 text-blue-800 text-xs">{controllerType} CONTROL</Badge>
+          </div>
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            <div className="flex items-center space-x-1">
+              <span className="text-muted-foreground">Signal:</span>
+              <span className="font-mono font-semibold">{signalStrength}%</span>
             </div>
-            
-            {/* Consistent Radio Status During Transmission */}
-            <div className="space-y-2 mb-4">
-              <div className="flex justify-between items-center">
-                <span className="font-mono text-lg font-bold">{currentFrequency}</span>
-                <Badge className="bg-blue-100 text-blue-800 text-xs">{controllerType} CONTROL</Badge>
-              </div>
-              <div className="grid grid-cols-2 gap-2 text-xs">
-                <div className="flex items-center space-x-1">
-                  <span className="text-muted-foreground">Signal:</span>
-                  <span className="font-mono font-semibold">{signalStrength}%</span>
-                </div>
-                <div className="flex items-center justify-end">
-                  <SignalStrength strength={signalStrength} />
-                </div>
-                <div className="flex items-center space-x-1">
-                  <span className="text-muted-foreground">Callsign:</span>
-                  <span className="font-mono font-semibold">{aircraftCallsign}</span>
-                </div>
-                <div className="text-xs text-muted-foreground text-right">
-                  Processing...
-                </div>
-              </div>
+            <div className="flex items-center justify-end">
+              <SignalStrength strength={signalStrength} />
+            </div>
+            <div className="flex items-center space-x-1">
+              <span className="text-muted-foreground">Callsign:</span>
+              <span className="font-mono font-semibold">{aircraftCallsign}</span>
+            </div>
+            <div className="text-xs text-muted-foreground text-right">
+              {isAudioPlaying ? 'Processing...' : 'Ready'}
             </div>
           </div>
-        ) : showTranscription && currentInstruction ? (
-          <div className="flex-1 flex flex-col min-h-0">
-            {/* Restructured Transmission Header - Priority: Frequency > Controller > Status */}
-            <div className="space-y-2 mb-3 flex-shrink-0">
-              <div className="flex justify-between items-center">
-                <span className="font-mono text-lg font-bold">{currentFrequency}</span>
-                <Badge className="bg-blue-100 text-blue-800 text-xs">{controllerType} CONTROL</Badge>
-              </div>
-              <div className="grid grid-cols-2 gap-2 text-xs">
-                <div className="flex items-center space-x-1">
-                  <span className="text-muted-foreground">Confidence:</span>
-                  <ConfidenceScore confidence={currentAudio.confidence} size="sm" />
+        </div>
+
+        {/* Fixed Transcription Box */}
+        <div className="flex-1 overflow-y-auto min-h-0">
+          <div className={`p-4 rounded-lg mb-4 ${isForMyCallsign && showTranscription ? 'bg-red-50 border-2 border-red-200' : 'bg-gray-50 border border-gray-200'}`}>
+            {isAudioPlaying ? (
+              <div className="text-center">
+                {/* Audio Waveform Animation */}
+                <div className="flex justify-center items-center mb-6">
+                  <div className="flex items-center space-x-2 h-24">
+                    {[...Array(16)].map((_, i) => (
+                      <div
+                        key={`wave-${i}`}
+                        className="waveform-bar bg-gradient-to-t from-blue-500 to-blue-400 rounded-full"
+                        style={{
+                          width: '6px',
+                          height: `${20 + (i % 6) * 12}px`,
+                          animationDelay: `${i * 0.06}s`,
+                        }}
+                      />
+                    ))}
+                  </div>
                 </div>
-                <div className="flex items-center justify-end">
-                  <SignalStrength strength={signalStrength} />
-                </div>
-                <div className="flex items-center space-x-1">
-                  <span className="text-muted-foreground">Signal:</span>
-                  <span className="font-mono font-semibold">{signalStrength}%</span>
-                </div>
-                <div className="flex justify-end">
-                  <Button 
-                    size="sm" 
-                    variant="ghost" 
-                    onClick={onReplayAudio}
-                    className="h-6 px-2 text-xs"
-                  >
-                    <RotateCcw className="h-3 w-3 mr-1" />
-                    REPLAY
-                  </Button>
+                
+                <div className="inline-flex items-center space-x-2 px-4 py-2 bg-red-100 text-red-700 rounded-full text-sm font-medium">
+                  <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+                  <span>RECEIVING TRANSMISSION</span>
                 </div>
               </div>
-            </div>
-            
-            {/* Scrollable Content Area */}
-            <div className="flex-1 overflow-y-auto min-h-0">
-              {/* Transcription */}
-              <div className={`p-4 rounded-lg mb-4 ${isForMyCallsign ? 'bg-red-50 border-2 border-red-200' : 'bg-gray-50 border border-gray-200'}`}>
+            ) : showTranscription && currentInstruction ? (
+              <>
                 {isForMyCallsign && (
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center space-x-2">
@@ -267,34 +232,38 @@ const ATCCommunicationCard: React.FC<ATCCommunicationCardProps> = ({
                     </Button>
                   </div>
                 )}
+              </>
+            ) : (
+              <div className="text-center text-muted-foreground py-8">
+                <div className="text-sm">No transcription available</div>
+                <div className="text-xs mt-1">Transmission will appear here</div>
               </div>
-            </div>
+            )}
+          </div>
+        </div>
 
-            {/* Status Footer */}
-            <div className="text-center text-sm pt-3 space-y-1 flex-shrink-0 border-t border-gray-100">
-              {isForMyCallsign ? (
-                <div className="text-red-600 font-medium text-xs">
-                  ✓ Clearance received • {currentAudio.suggestions?.length || 0} actions identified
-                </div>
-              ) : (
-                <div className="text-green-600 font-medium text-xs">
-                  ✓ Transcription complete • Other traffic
-                </div>
-              )}
+        {/* Status Footer */}
+        <div className="text-center text-sm pt-3 space-y-1 flex-shrink-0 border-t border-gray-100">
+          {isAudioPlaying ? (
+            <div className="text-blue-600 font-medium text-xs">
+              ⏳ Processing transmission...
             </div>
-          </div>
-        ) : (
-          <div className="flex-1 flex flex-col">
-            <VoiceEmptyState 
-              onStartTransmission={onStartSimulation}
-              currentFreq={currentFrequency}
-              controllerType={controllerType}
-              lastContact="14:23:45"
-              signalStrength={signalStrength}
-              aircraftCallsign={aircraftCallsign}
-            />
-          </div>
-        )}
+          ) : showTranscription && currentInstruction ? (
+            isForMyCallsign ? (
+              <div className="text-red-600 font-medium text-xs">
+                ✓ Clearance received • {currentAudio.suggestions?.length || 0} actions identified
+              </div>
+            ) : (
+              <div className="text-green-600 font-medium text-xs">
+                ✓ Transcription complete • Other traffic
+              </div>
+            )
+          ) : (
+            <div className="text-muted-foreground font-medium text-xs">
+              Ready for transmission
+            </div>
+          )}
+        </div>
       </CardContent>
     </Card>
   );
