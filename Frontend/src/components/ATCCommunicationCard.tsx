@@ -67,12 +67,20 @@ const ATCCommunicationCard: React.FC<ATCCommunicationCardProps> = ({
       return;
     }
 
+    // If audio is playing, don't start reveal yet
+    if (isAudioPlaying) {
+      setDisplayedWords([]);
+      setIsRevealing(false);
+      return;
+    }
+
+    // Start revealing immediately after audio ends
     setIsRevealing(true);
     setDisplayedWords([]);
     
     const words = currentInstruction.split(' ');
     let currentWordIndex = 0;
-    const revealSpeed = 120; // milliseconds per word
+    const revealSpeed = 150; // Faster reveal since audio has ended
     
     const revealNextWord = () => {
       if (currentWordIndex < words.length) {
@@ -87,14 +95,14 @@ const ATCCommunicationCard: React.FC<ATCCommunicationCardProps> = ({
       }
     };
 
-    // Small delay before starting to reveal
-    const startRevealing = setTimeout(revealNextWord, 150);
+    // Start revealing immediately after audio ends
+    const startRevealing = setTimeout(revealNextWord, 50);
     
     return () => {
       clearTimeout(startRevealing);
       setIsRevealing(false);
     };
-  }, [currentInstruction, showTranscription]);
+  }, [currentInstruction, showTranscription, isAudioPlaying]);
 
   // Enhanced replay with slow option
   const handleSlowReplay = () => {
